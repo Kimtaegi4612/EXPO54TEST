@@ -1,97 +1,151 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, Alert, KeyboardAvoidingView, Platform
+} from 'react-native';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      Alert.alert('로그인 실패', '이메일 또는 비밀번호를 확인해요');
+  const handleAuth = async () => {
+    if (!email || !password) {
+      Alert.alert('이메일과 비밀번호를 입력해요');
+      return;
     }
-  };
-
-  const handleSignUp = async () => {
+    setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      Alert.alert('가입 완료', '회원가입이 됐어요!');
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
     } catch (error) {
-      Alert.alert('가입 실패', '이미 있는 계정이거나 비밀번호가 6자 이상이어야 해요');
+      Alert.alert(
+        isLogin ? '로그인 실패' : '가입 실패',
+        isLogin ? '이메일 또는 비밀번호를 확인해요' : '이미 있는 계정이거나 비밀번호가 6자 이상이어야 해요'
+      );
     }
+    setLoading(false);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.emoji}>💑</Text>
-      <Text style={styles.title}>우리 둘만의 공간</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.top}>
+        <Text style={styles.emoji}>💑</Text>
+        <Text style={styles.title}>우리 둘만의 공간</Text>
+        <Text style={styles.subtitle}>함께하는 모든 순간을 기록해요</Text>
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="이메일"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="비밀번호"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={styles.card}>
+        <View style={styles.toggle}>
+          <TouchableOpacity
+            style={[styles.toggleBtn, isLogin && styles.toggleActive]}
+            onPress={() => setIsLogin(true)}
+          >
+            <Text style={[styles.toggleText, isLogin && styles.toggleTextActive]}>로그인</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleBtn, !isLogin && styles.toggleActive]}
+            onPress={() => setIsLogin(false)}
+          >
+            <Text style={[styles.toggleText, !isLogin && styles.toggleTextActive]}>회원가입</Text>
+          </TouchableOpacity>
+        </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>로그인</Text>
-      </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="이메일"
+          placeholderTextColor="#ccc"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="비밀번호 (6자 이상)"
+          placeholderTextColor="#ccc"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-      <TouchableOpacity style={styles.buttonOutline} onPress={handleSignUp}>
-        <Text style={styles.buttonOutlineText}>회원가입</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleAuth}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? '처리 중...' : isLogin ? '로그인' : '회원가입'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5F7',
-    alignItems: 'center',
+    backgroundColor: '#FFF0F5',
     justifyContent: 'center',
-    padding: 30,
+    padding: 24,
   },
-  emoji: { fontSize: 60, marginBottom: 10 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#E75480', marginBottom: 40 },
-  input: {
-    width: '100%',
+  top: { alignItems: 'center', marginBottom: 40 },
+  emoji: { fontSize: 70, marginBottom: 16 },
+  title: { fontSize: 26, fontWeight: '700', color: '#E75480', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: '#bbb' },
+  card: {
     backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#E75480',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF0F5',
     borderRadius: 12,
-    padding: 15,
+    padding: 4,
+    marginBottom: 24,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  toggleActive: { backgroundColor: '#E75480' },
+  toggleText: { fontSize: 14, color: '#ccc', fontWeight: '600' },
+  toggleTextActive: { color: '#fff' },
+  input: {
+    backgroundColor: '#FFF8FA',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: '#333',
     marginBottom: 12,
-    fontSize: 16,
     borderWidth: 1,
-    borderColor: '#f0c0d0',
+    borderColor: '#FFE0EC',
   },
   button: {
-    width: '100%',
     backgroundColor: '#E75480',
-    padding: 15,
-    borderRadius: 12,
+    borderRadius: 14,
+    padding: 16,
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 8,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  buttonOutline: {
-    width: '100%',
-    borderWidth: 1.5,
-    borderColor: '#E75480',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonOutlineText: { color: '#E75480', fontSize: 16, fontWeight: 'bold' },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
